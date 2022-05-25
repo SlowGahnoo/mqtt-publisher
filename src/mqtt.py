@@ -8,6 +8,7 @@ class Client:
         self.id = f"python-mqtt-{id}"
 
     def connect(self, broker, port = 1883, topic = "/python/mqtt/"):
+        """ Connect to MQTT broker """
         self.topic = topic
         logging.info("Connecting to MQTT Broker")
         def on_connect(client, userdata, flags, rc):
@@ -21,38 +22,47 @@ class Client:
         self.client.connect(broker, port)
 
     def disconnect(self):
+        """ Disconnect from MQTT broker """
         self.client.disconnect()
 
         
 class Publisher(Client):
     def __init__(self, id):
         super().__init__(id)
+        self.message = ""
 
     def create_message(self, message):
-        self.message = message 
+        """ Prepare a message to publish """
+        self.message = message
 
     def publish(self):
+        """ Publish the prepared message """
         result = self.client.publish(self.topic, self.message)
         status = result[0]
         if status == 0:
             logging.info(f"Sent: {self.message}")
         else:
             logging.error(f"Failed to send message to topic {self.topic}")
+        self.message = ""
 
 class Subscriber(Client):
     def __init__(self, id):
         super().__init__(id)
 
     def subscribe(self):
+        """ Start receiving messages from publisher of topic """
         def on_message(client, userdata, msg):
             logging.info(f"Received: {msg.payload.decode()}")
         self.client.subscribe(self.topic)
         self.client.on_message = on_message
         self.client.loop_forever()
 
+# broker, topic = 'broker.emqx.io', '/python/mqtt/'
+default_broker, default_topic = 'test.mosquitto.org', '/python/mqtt/'
+
 def run1():
     p = Publisher(random.randint(0, 1000))
-    p.connect(broker = 'broker.emqx.io', topic = '/python/mqtt/')
+    p.connect(broker = default_broker, topic = default_topic)
     try:
         while True:
             p.create_message(input(">> "))
@@ -62,8 +72,11 @@ def run1():
 
 def run2():
     c = Subscriber(random.randint(0, 1000))
-    c.connect(broker = 'broker.emqx.io', topic = '/python/mqtt/')
-    c.subscribe()
+    c.connect(broker = default_broker, topic = default_topic)
+    try:
+        c.subscribe()
+    except KeyboardInterrupt:
+        return
 
 import sys
 if __name__ == "__main__":
